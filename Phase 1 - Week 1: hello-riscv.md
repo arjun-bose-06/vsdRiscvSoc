@@ -279,3 +279,142 @@ This file represents your binary's memory layout and can be loaded into emulator
 
 </details>
 
+# Task 6: Emulating and Debugging hello.elf in QEMU using GDB
+
+
+  
+ <details> <summary><strong>Step 1: Start QEMU with debugging enabled</strong></summary>
+
+```bash
+qemu-system-riscv32 -nographic -machine sifive_e -kernel hello.elf -S -gdb tcp::1234
+```
+</details>
+
+ <details> <summary><strong>Step 2: Connect GDB to QEMU</strong></summary>
+
+  Open another terminal and run:
+
+```bash
+riscv32-unknown-elf-gdb hello.elf
+```
+
+Then inside GDB:
+
+```gdb
+
+(gdb) target remote :1234
+```
+You should see:
+
+```cpp
+
+Remote debugging using :1234
+0x00001000 in ?? ()
+```
+
+</details> 
+
+<details> <summary><strong>Step 3: Set breakpoint at <code>main</code> and continue</strong></summary>
+  
+```gdb
+(gdb) break main
+Breakpoint 1 at 0x1016a: file hello.c, line 5.
+(gdb) continue
+```
+ Problem:
+At this point, QEMU consistently froze after hitting "continue".
+
+Attempting to interrupt using Ctrl+C resulted in:
+
+```ruby
+Program received signal SIGINT, Interrupt.
+0x00000000 in ?? ()
+```
+Stepping through with stepi stayed stuck at 0x00000000:
+
+```scss
+(gdb) stepi
+0x00000000 in ?? ()
+```
+
+This behavior indicates that debugging failed due to missing debug symbols or QEMU not progressing correctly.
+
+</details>
+
+<details><summary><b> MY OUTPUT: </b></summary>
+
+![WhatsApp Image 2025-06-05 at 17 24 46_cf10cf24](https://github.com/user-attachments/assets/9bd0c138-c8d7-4ca1-b83a-e2cd2723191a)
+
+
+![WhatsApp Image 2025-06-05 at 17 24 47_d0c7d13e](https://github.com/user-attachments/assets/ef8e7746-85c8-4c9f-838e-ab3d769045f8)
+
+
+</details>
+
+
+# Task 7: Running Under an Emulator
+
+<b>Goal</b>
+
+Run a bare-metal RISC-V ELF program using an emulator (Spike or QEMU) and see output via UART console.  
+This is essential if you do not have access to real hardware yet.
+
+---
+
+<details>
+<summary><b>Step 1: Compile your bare-metal program with debug symbols</b></summary>
+
+Use the following command to compile your C program (`hello.c`) with the linker script (`linker.ld`) and include debug info:
+
+```bash
+riscv32-unknown-elf-gcc -g -nostdlib -nostartfiles -T linker.ld -o hello.elf hello.c
+```
+</details>
+
+<details> <summary><b>Step 2: Run the ELF using QEMU</b></summary>
+Use QEMU's RISC-V system emulator to run your ELF and get UART output:
+
+```bash
+
+qemu-system-riscv32 -nographic -machine sifive_e -kernel hello.elf
+```
+</details>
+
+<details> <summary><b>Step 3: Debugging using GDB with QEMU</b></summary><br>
+  
+Start QEMU with GDB server enabled:
+
+```bash
+qemu-system-riscv32 -nographic -machine sifive_e -kernel hello.elf -S -gdb tcp::1234
+```
+-S tells QEMU to start paused (waits for GDB)
+
+-gdb tcp::1234 opens TCP port 1234 for GDB remote debugging
+
+In another terminal, start GDB:
+
+```bash
+
+riscv32-unknown-elf-gdb hello.elf
+```
+
+Connect to QEMU's GDB server:
+
+```gdb
+(gdb) target remote :1234
+```
+
+Use GDB commands:
+
+- info registers
+Shows the current values of CPU registers (e.g., ra, sp, gp, a0, etc.)
+
+![WhatsApp Image 2025-06-05 at 19 32 28_5e9db6a7](https://github.com/user-attachments/assets/7211a277-8224-4018-a7c8-cb1950437f2d)
+
+
+- disassemble or disassemble <function>
+Shows the assembly instructions around the program counter or for a specific function
+
+![WhatsApp Image 2025-06-05 at 19 39 10_72e3359e](https://github.com/user-attachments/assets/94bbad30-e94c-44ad-a6c3-efdb0c021c97)
+
+</details>
