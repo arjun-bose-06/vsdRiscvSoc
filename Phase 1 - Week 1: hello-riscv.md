@@ -929,7 +929,9 @@ Is RV32 little-endian by default? Show how to verify byte ordering with a union 
 
 </details>
 
-## What is RISC-V?
+---
+
+## Summary: What is RISC-V?
 
 RISC-V is an **open Instruction Set Architecture (ISA)**. It is not a microprocessor, not Verilog, and not a chip.
 
