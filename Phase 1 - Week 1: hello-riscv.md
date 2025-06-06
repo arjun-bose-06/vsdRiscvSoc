@@ -1000,6 +1000,40 @@ My cursor is frozen at the next line
 
 </details>
 
+# Task 17: Endianness & Struct Packing
+
+**Question:**  
+Is RV32 little-endian by default? Show how to verify byte ordering with a union trick in C.
+
+---
+
+<details>
+<summary><b>Steps to check endianness in C</b></summary><br>
+
+```c
+#include <stdint.h>
+
+int main() {
+    union {
+        uint32_t value;
+        uint8_t bytes[4];
+    } test;
+
+    test.value = 0x01020304;
+
+    // The bytes array stores the individual bytes of the 32-bit integer
+    // If the first byte is 0x04, system is little-endian
+    // If the first byte is 0x01, system is big-endian
+
+    // Since this is bare-metal, printf won't work without UART setup.
+    // Normally you'd output these bytes to UART or debugger.
+    
+    return 0;
+}
+```
+
+---
+
 
 
 
