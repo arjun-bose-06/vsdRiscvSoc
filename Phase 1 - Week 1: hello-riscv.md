@@ -53,6 +53,8 @@ riscv32-unknown-elf-gdb --version
 
 </details>
 
+---
+
 # 2. Compile “Hello, RISC-V”
 
 The goal is to write a minimal C "Hello, World!" program, compile it using the RISC-V toolchain for the RV32IMC architecture, and verify the output ELF file.
@@ -109,6 +111,8 @@ Expected output (also displaying the possible error you may encounter):
 
 </details>
 
+---
+
 # 3. From C to Assembly
 
 ### Goal
@@ -163,7 +167,7 @@ The first two correspond to the prologue and the bottom three to the epilogue
 
 </details>
 
-
+---
   
 # Task 4: Hex Dump & Disassembly
 
@@ -222,6 +226,8 @@ This file represents your binary's memory layout and can be loaded into emulator
 </details>
 </details> 
 
+---
+
 # Task 5: ABI & Register Cheat-Sheet
 
 
@@ -278,6 +284,8 @@ This file represents your binary's memory layout and can be loaded into emulator
 - **zero (x0):** Always zero. Writes have no effect.
 
 </details>
+
+---
 
 # Task 6: Emulating and Debugging hello.elf in QEMU using GDB
 
@@ -351,6 +359,7 @@ This behavior indicates that debugging failed due to missing debug symbols or QE
 
 </details>
 
+---
 
 # Task 7: Running Under an Emulator
 
@@ -411,10 +420,153 @@ Shows the current values of CPU registers (e.g., ra, sp, gp, a0, etc.)
 
 ![WhatsApp Image 2025-06-05 at 19 32 28_5e9db6a7](https://github.com/user-attachments/assets/7211a277-8224-4018-a7c8-cb1950437f2d)
 
-
 - disassemble or disassemble <function>
 Shows the assembly instructions around the program counter or for a specific function
 
 ![WhatsApp Image 2025-06-05 at 19 39 10_72e3359e](https://github.com/user-attachments/assets/94bbad30-e94c-44ad-a6c3-efdb0c021c97)
 
 </details>
+
+---
+
+# Task 8: Exploring GCC Optimisation
+
+**Question:**  
+*“Compile the same file with -O0 vs -O2. What differences appear in the assembly and why?”*
+
+---
+
+### Goal
+
+To observe how GCC optimizations affect assembly output by comparing two compiler optimization levels:  
+- `-O0` (no optimization)  
+- `-O2` (aggressive optimizations)
+
+---
+
+<details>
+<summary><strong> Step 1: Write a test C program</strong></summary>
+
+Use a slightly optimized example to make the changes clearly visible:
+
+```c
+// File: opt.c
+int square(int x) {
+    return x * x;
+}
+
+int unused_function() {
+    int y = 100;
+    return y;
+}
+
+int main() {
+    int a = 10;
+    int b = square(a);
+    return b;
+}
+```
+
+</details>
+
+<details> <summary><strong> Step 2: Compile with -O0 (no optimization)</strong></summary>
+
+  
+```bash
+riscv32-unknown-elf-gcc -S -O0 opt.c -o opt_O0.s
+```
+
+This generates a verbose .s file with all functions and minimal optimization.
+
+</details>
+
+<details> <summary><strong> Step 3: Compile with -O2 (optimized)</strong></summary>
+
+```bash
+riscv32-unknown-elf-gcc -S -O2 opt.c -o opt_O2.s
+```
+
+This will inline small functions, eliminate unused ones, and use registers more efficiently.
+
+</details>
+
+<details> <summary><strong> Step 4: Compare the two versions</strong></summary>
+
+```bash
+diff opt_O0.s opt_O2.s
+```
+
+You should see:
+
+- unused_function removed
+
+- square inlined (i.e., no separate function exists)
+
+- Tighter, shorter assembly
+
+
+| Feature                     | `-O0` Output (Verbose, No Optimizations) | `-O2` Output (Optimized, Compact) |
+|----------------------------|-------------------------------------------|----------------------------------|
+| Function: `square`         | Present as a standalone function          | **Removed, inlined into `main`** |
+| Function: `unused_function`| Present in full                           | **Removed entirely**             |
+| `main` function            | Calls `square` via `jal`                  | Does the multiplication inline   |
+| Registers                  | Loads/stores to stack                     | Uses fewer registers             |
+| Constant `int a = 10`      | Loaded into memory, then used             | Constant used directly           |
+</details>
+
+<details> <summary><strong>My Code: </strong></summary><br>
+  
+![unnamed](https://github.com/user-attachments/assets/6b93f125-4d09-40c9-a71d-7f22cf161386)
+
+</details>
+
+---
+
+# Task 9: Inline Assembly Basics
+
+<strong> Goal</strong>
+
+  To write a function in C that returns the current value of the RISC-V cycle counter by accessing CSR register 0xC00 using inline assembly.
+
+  ---
+
+<details> <summary><strong>C Function Code</strong></summary><br>
+  
+```c
+static inline uint32_t rdcycle(void) {
+    uint32_t c;
+    asm volatile ("csrr %0, cycle" : "=r"(c));
+    return c;
+}
+```
+</details>
+
+<details> <summary><strong> Explanation of Each Part</strong></summary><br>
+ 
+  <details> <summary><strong>static inline uint32_t rdcycle(void)</strong></summary><br>
+
+- static inline: Makes the function inlineable and avoids multiple-definition errors.
+
+- uint32_t: Returns a 32-bit unsigned integer.
+
+- rdcycle: Custom function name.
+  
+  </details>  
+
+
+ <details><summary><strong> asm volatile ("csrr %0, cycle" : "=r"(c));</strong></summary>
+
+- asm volatile
+   - asm: Embed assembly code.
+   - volatile: Prevent compiler from optimizing this line away.
+- "csrr %0, cycle"
+   - csrr: Control and Status Register Read instruction.
+   - cycle: Name for CSR 0xC00 (cycle counter).
+   - %0: Placeholder for the first operand (here, the output variable c).
+- : "=r"(c)
+   - "=r": Output operand (= means write-only), stored in a general-purpose register (r).
+   - (c): The C variable that receives the result.
+
+</details>
+
+</details>  
