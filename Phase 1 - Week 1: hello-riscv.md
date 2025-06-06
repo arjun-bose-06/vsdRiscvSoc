@@ -612,21 +612,8 @@ The address 0x10012000 is 4-byte aligned (divisible by 4), which is necessary fo
 
 </details> <details> <summary><strong>Minimal Linker Script</strong></summary><br>
 
-```ld
+![unnamed](https://github.com/user-attachments/assets/79e0d5f0-e07a-45bf-80b5-015dadfc4179)
 
-SECTIONS
-{
-  .text 0x00000000 :
-  {
-    *(.text*)
-  }
-
-  .data 0x10000000 :
-  {
-    *(.data*)
-  }
-}
-```
 
 </details> 
 
@@ -718,31 +705,9 @@ SECTIONS
 
 <details> <summary><strong>Minimal Example of `crt0.S`</strong></summary><br>
   
-```asm
-.section .init
-.global _start
+![unnamed](https://github.com/user-attachments/assets/d87b20ee-9b88-4adf-81dd-c60e87be490b)
 
-_start:
-  la sp, _stack_top     # Set up stack pointer
 
-  # Zero .bss
-  la a0, __bss_start
-  la a1, __bss_end
-  li a2, 0
-bss_loop:
-  beq a0, a1, bss_done
-  sw a2, 0(a0)
-  addi a0, a0, 4
-  j bss_loop
-bss_done:
-
-  # Call main()
-  call main
-
-# Loop forever if main returns
-hang:
-  j hang
-```
 </details>
 
 ---
@@ -848,60 +813,7 @@ Method:
 
 # Full Code with Explanation:
 
-```c
-#include <stdint.h>
-#include <stdio.h>
-
-// Shared spinlock variable
-volatile int lock = 0;
-
-// Shared resource
-volatile int shared_counter = 0;
-
-// Atomic lock using RISC-V instructions
-void acquire_lock(volatile int *lock) {
-    int tmp;
-    do {
-        asm volatile (
-            "lr.w %[tmp], %[addr]\n"           // Load-reserved from lock
-            "bnez  %[tmp], 1f\n"               // If lock != 0, someone else has it
-            "li    %[tmp], 1\n"                // Prepare value 1 (locked)
-            "sc.w  %[tmp], %[tmp], %[addr]\n"  // Try to store 1; success if tmp == 0
-            "1:"
-            : [tmp] "=&r" (tmp)
-            : [addr] "r" (lock)
-            : "memory"
-        );
-    } while (tmp);  // Retry if store failed
-}
-
-// Unlock by resetting lock to 0
-void release_lock(volatile int *lock) {
-    *lock = 0;
-}
-
-// Simulated thread 1
-void thread1() {
-    acquire_lock(&lock);
-    shared_counter += 1;
-    release_lock(&lock);
-}
-
-// Simulated thread 2
-void thread2() {
-    acquire_lock(&lock);
-    shared_counter += 2;
-    release_lock(&lock);
-}
-
-int main() {
-    thread1();  // Simulate thread 1
-    thread2();  // Simulate thread 2
-
-  printf("Shared counter: %d\n", shared_counter); // Expect 3
-    return 0;
-}
-```
+![unnamed](https://github.com/user-attachments/assets/a8a45a61-8a5a-4dcc-9812-411b4e43b2ce)
 
 ---
 
@@ -1010,27 +922,8 @@ Is RV32 little-endian by default? Show how to verify byte ordering with a union 
 <details>
 <summary><b>Steps to check endianness in C</b></summary><br>
 
-```c
-#include <stdint.h>
+![unnamed](https://github.com/user-attachments/assets/1643311d-b62f-494b-8d2c-e58c309c742e)
 
-int main() {
-    union {
-        uint32_t value;
-        uint8_t bytes[4];
-    } test;
-
-    test.value = 0x01020304;
-
-    // The bytes array stores the individual bytes of the 32-bit integer
-    // If the first byte is 0x04, system is little-endian
-    // If the first byte is 0x01, system is big-endian
-
-    // Since this is bare-metal, printf won't work without UART setup.
-    // Normally you'd output these bytes to UART or debugger.
-    
-    return 0;
-}
-```
 
 ---
 
