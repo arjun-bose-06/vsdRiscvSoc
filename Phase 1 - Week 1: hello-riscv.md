@@ -746,3 +746,262 @@ hang:
 </details>
 
 ---
+
+# 13. Machine Timer Interrupt (MTIP) Setup</strong></summary><br>
+
+<b>Question</b>
+
+“Demonstrate how to enable the machine-timer interrupt (MTIP) and write a simple handler in C/asm.”
+
+---
+
+<details><summary><b>Method</b></summary>
+
+- Write to mtimecmp
+
+- Set mie (enable machine timer interrupt)
+
+- Set mstatus (enable global interrupt)
+
+- Point mtvec to a valid handler
+
+- Use __attribute__((interrupt)) in C
+
+<b>Full Code (with Comments)</b><br>
+
+![unnamed](https://github.com/user-attachments/assets/8c6e7b92-ccf2-4b7c-8d7b-f8d66dab9f3f)
+
+</details>
+
+---
+
+# 14. rv32imac vs rv32imc – What’s the “A”?</strong>
+
+### ❓ Question  
+**“Explain the ‘A’ (atomic) extension in rv32imac. What instructions are added and why are they useful?”**
+
+---
+
+### What is the “A” Extension?
+
+- The **“A” stands for Atomic** — it adds **atomic read-modify-write** instructions.
+- These instructions allow for **safe, hardware-supported access to shared memory**.
+- It is used when multiple cores/threads need to access the same variable without conflicts.
+
+---
+
+###  Instructions Introduced by the "A" Extension
+
+| Instruction   | Meaning                             | Purpose                            |
+|---------------|--------------------------------------|-------------------------------------|
+| `lr.w`        | Load-Reserved word                   | Starts an atomic load-store block   |
+| `sc.w`        | Store-Conditional word               | Stores only if no one else touched |
+| `amoadd.w`    | Atomic add                           | Adds a value atomically             |
+| `amoswap.w`   | Atomic swap                          | Atomically swaps memory             |
+| `amoand.w`    | Atomic AND                           | Useful for bitmask flags            |
+| `amoor.w`     | Atomic OR                            | Used in setting flags atomically    |
+
+---
+
+###  Use Cases
+
+- **Operating Systems**: Manage shared memory between tasks/interrupts.
+- **Multithreading**: Protect shared counters or variables.
+- **Lock-Free Data Structures**: Like queues or stacks, to avoid performance penalties from locking.
+
+---
+
+###  Analogy
+
+Imagine you're writing on a shared whiteboard:
+
+- `lr.w` → You reserve a spot to write.  
+- `sc.w` → You try to write, but **only succeed if no one else has written there** since you reserved it.  
+- `amoadd.w` → You **add a number** to the current value, and it's done **safely**, even if others are trying at the same time.
+
+---
+
+### Summary
+
+- The “A” extension makes **safe concurrent memory access** possible in RISC-V.
+- It is essential for low-level OS and embedded systems programming.
+- It **distinguishes `rv32imac` (which supports atomics)** from `rv32imc` (which does not).
+
+---
+
+# Task 15: Atomic Test Program
+
+### Question:
+
+“Provide a two-thread mutex example (pseudo-threads in main) using lr.w/sc.w on RV32.”
+
+---
+
+Method:
+- Simulate two threads using functions in main.
+
+- Use lr.w/sc.w instructions in inline assembly for spinlock mutex.
+
+- Demonstrate protection of a shared variable (shared_counter) from race conditions.
+
+---
+
+# Full Code with Explanation:
+
+```c
+#include <stdint.h>
+#include <stdio.h>
+
+// Shared spinlock variable
+volatile int lock = 0;
+
+// Shared resource
+volatile int shared_counter = 0;
+
+// Atomic lock using RISC-V instructions
+void acquire_lock(volatile int *lock) {
+    int tmp;
+    do {
+        asm volatile (
+            "lr.w %[tmp], %[addr]\n"           // Load-reserved from lock
+            "bnez  %[tmp], 1f\n"               // If lock != 0, someone else has it
+            "li    %[tmp], 1\n"                // Prepare value 1 (locked)
+            "sc.w  %[tmp], %[tmp], %[addr]\n"  // Try to store 1; success if tmp == 0
+            "1:"
+            : [tmp] "=&r" (tmp)
+            : [addr] "r" (lock)
+            : "memory"
+        );
+    } while (tmp);  // Retry if store failed
+}
+
+// Unlock by resetting lock to 0
+void release_lock(volatile int *lock) {
+    *lock = 0;
+}
+
+// Simulated thread 1
+void thread1() {
+    acquire_lock(&lock);
+    shared_counter += 1;
+    release_lock(&lock);
+}
+
+// Simulated thread 2
+void thread2() {
+    acquire_lock(&lock);
+    shared_counter += 2;
+    release_lock(&lock);
+}
+
+int main() {
+    thread1();  // Simulate thread 1
+    thread2();  // Simulate thread 2
+
+  printf("Shared counter: %d\n", shared_counter); // Expect 3
+    return 0;
+}
+```
+
+---
+
+Expected Output:<br>
+
+```vbnet
+Shared counter: 3
+```
+Each function locks the variable, modifies it safely, and releases the lock.
+
+---
+
+### Concepts
+- Spinlock: A busy-wait loop that tries acquiring a lock until it succeeds.
+
+- lr.w / sc.w: RISC-V atomic pair that guarantees safe update without interference.
+
+- Volatile: Prevents compiler from caching or optimizing memory accesses.
+
+- Pseudo-threads: We simulate threads using plain functions to show locking logic.
+
+ --- 
+
+ # 16 Using Newlib printf Without an OS
+
+---
+
+## Question
+
+“How do I retarget `_write` so that `printf` sends bytes to my memory-mapped UART?”
+
+---
+
+## Answer Outline
+
+- Implement `_write(int fd, char* buf, int len)` that loops over bytes to `UART_TX`.
+- Re-link with `-nostartfiles` plus custom `syscalls.c`.
+- Run in QEMU and verify UART output.
+
+---
+
+## Important Note on UART Address
+
+When running on QEMU with `-machine sifive_e`, the **UART memory-mapped I/O address is `0x10013000`**, not `0x10000000`. Using the wrong address will cause no output and program hang.
+
+---
+
+<details><summary><strong> Minimal `_write` Implementation</strong></summary><br>
+
+
+![unnamed](https://github.com/user-attachments/assets/d6affab4-d497-4657-90a4-e7e02483f5ca)
+
+</details>
+
+<details><summary><strong>crt0.S file:</strong></summary><br>
+
+![unnamed](https://github.com/user-attachments/assets/5a5f3e99-8bf1-45d1-ae20-ec24d79abbae)
+
+
+</details>
+
+<details><summary><strong> linker.ld file:</strong></summary><br>
+
+![unnamed](https://github.com/user-attachments/assets/b4449d2f-4f7a-41ec-8a0e-30900ca92b48)
+
+
+
+</details>
+
+<details><summary><strong>build.sh file:</strong></summary><br>
+
+
+![unnamed](https://github.com/user-attachments/assets/7ee930dc-656c-41ef-806c-1aee3c7bae9c)
+
+
+</details>
+
+<details><summary><strong>Terminal commands:</strong></summary><br>
+  
+![unnamed](https://github.com/user-attachments/assets/579f85fb-1215-4838-9863-882c3eb917fa)
+
+
+
+
+
+</details>
+
+<details><summary><strong>My Output:</strong></summary><br>
+
+In spite of following these steps, I did not receive the required output:
+
+
+![unnamed](https://github.com/user-attachments/assets/6a52d2a6-ec03-4f3d-ba60-d65d94bc9714)
+
+My cursor is frozen at the next line
+
+</details>
+
+
+
+
+
+
