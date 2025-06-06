@@ -532,13 +532,9 @@ You should see:
 
 <details> <summary><strong>C Function Code</strong></summary><br>
   
-```c
-static inline uint32_t rdcycle(void) {
-    uint32_t c;
-    asm volatile ("csrr %0, cycle" : "=r"(c));
-    return c;
-}
-```
+![unnamed](https://github.com/user-attachments/assets/5cda32e2-41aa-45d2-899a-f071cdf8c085)
+
+
 </details>
 
 <details> <summary><strong> Explanation of Each Part</strong></summary><br>
@@ -570,3 +566,38 @@ static inline uint32_t rdcycle(void) {
 </details>
 
 </details>  
+
+---
+
+# 10. Memory-Mapped I/O Demo
+
+<b>Problem Statement:</b>
+
+“Show a bare-metal C snippet to toggle a GPIO register located at 0x10012000. How do I prevent the compiler from optimizing the store away?”
+
+---
+
+<details><summary><strong>Code Snippet</strong></summary><br>
+
+![unnamed](https://github.com/user-attachments/assets/c8ae0fe6-665b-4db4-8e76-84caca8f8fd5)
+
+</details>
+
+ <details> <summary><strong> Explanation</strong></summary><br>
+   
+- volatile:
+  - Tells the compiler not to optimize access to the variable.
+  - Required when accessing hardware registers or memory-mapped I/O.
+  - Without it, compiler might skip the write because it sees no effect in program logic.
+
+- (uint32_t*)0x10012000:
+  - Casts the GPIO memory address to a pointer of type uint32_t*.
+  - This assumes the hardware register is 4 bytes wide.
+
+- *gpio = 0x1;:
+  - Writes the value 0x1 to the register.
+  - This could, for example, turn on a specific output pin.
+
+- Alignment:
+The address 0x10012000 is 4-byte aligned (divisible by 4), which is necessary for uint32_t access on many systems.
+
