@@ -601,3 +601,148 @@ You should see:
 - Alignment:
 The address 0x10012000 is 4-byte aligned (divisible by 4), which is necessary for uint32_t access on many systems.
 
+</details>
+
+# 11. Linker Script 101
+
+<strong> Problem Statement</strong>
+“Provide a minimal linker script that places .text at 0x00000000 and .data at 0x10000000 for RV32IMC.”
+
+---
+
+</details> <details> <summary><strong>Minimal Linker Script</strong></summary><br>
+
+```ld
+
+SECTIONS
+{
+  .text 0x00000000 :
+  {
+    *(.text*)
+  }
+
+  .data 0x10000000 :
+  {
+    *(.data*)
+  }
+}
+```
+
+</details> 
+
+<details><summary><strong> Why Flash and SRAM Addresses Differ</strong></summary><br>
+  
+- Flash (e.g., 0x00000000):
+
+  - Non-volatile memory.
+
+  - Stores program code that must survive resets/power cycles.
+
+- SRAM (e.g., 0x10000000):
+
+  - Volatile memory used for runtime data.
+
+  - Faster and writable, unlike Flash.
+
+ During startup, boot code usually copies .data from Flash to SRAM and zeros .bss, so variables are correctly initialized.
+
+</details>
+
+---
+
+# 12. Start-up Code & crt0
+
+<strong>Question</strong><br>
+
+“What does crt0.S typically do in a bare-metal RISC-V program and where do I get one?”
+
+---
+
+<details><summary><strong>What is `crt0.S`?</strong></summary><br>
+  
+- crt0.S is the "C Runtime Zero" file — the very first code that runs before main() in a bare-metal program.
+
+- It's written in assembly and is architecture-specific.
+
+- It performs system-level initialization that C programs assume has already been done.
+
+</details> 
+
+<details><summary><strong>Key Responsibilities of `crt0.S`</strong></summary><br>
+  
+- Set the Stack Pointer (sp)
+
+  - Stack is essential for calling C functions.
+
+  - crt0 sets sp to a known safe memory location (usually top of RAM).
+
+- Zero out .bss section
+
+  - .bss holds uninitialized global/static variables, which should start as 0.
+
+  - crt0 clears this region with a loop.
+
+- Copy .data from Flash to RAM
+
+  - .data holds initialized globals.
+
+  - crt0 copies them from ROM (Flash) to SRAM.
+
+- Call main()
+
+  - After setting everything up, crt0 branches to your main program.
+
+  - Infinite Loop After main Returns
+
+  - If main() returns, crt0 halts or spins forever to prevent undefined behavior.
+
+</details> <details> <summary><strong>Where to Get `crt0.S`</strong></summary>
+
+- Option 1: Write Your Own
+
+  - Very short (usually ~30–50 lines of RISC-V assembly).
+
+- Option 2: Use from a Runtime Library
+
+- Newlib and libc implementations often include crt0.S.
+
+- You can extract one from:
+
+  - newlib source
+
+  - SiFive’s freedom-e-sdk
+
+  - Minimal RISC-V templates on GitHub (bare-metal-riscv)
+
+</details> 
+
+<details> <summary><strong>Minimal Example of `crt0.S`</strong></summary><br>
+  
+```asm
+.section .init
+.global _start
+
+_start:
+  la sp, _stack_top     # Set up stack pointer
+
+  # Zero .bss
+  la a0, __bss_start
+  la a1, __bss_end
+  li a2, 0
+bss_loop:
+  beq a0, a1, bss_done
+  sw a2, 0(a0)
+  addi a0, a0, 4
+  j bss_loop
+bss_done:
+
+  # Call main()
+  call main
+
+# Loop forever if main returns
+hang:
+  j hang
+```
+</details>
+
+---
