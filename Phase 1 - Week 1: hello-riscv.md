@@ -929,6 +929,44 @@ Is RV32 little-endian by default? Show how to verify byte ordering with a union 
 
 </details>
 
+## What is RISC-V?
+
+RISC-V is an **open Instruction Set Architecture (ISA)**. It is not a microprocessor, not Verilog, and not a chip.
+
+### Key Clarifications:
+
+- **RISC-V is an ISA**: It defines the set of instructions a processor can execute (e.g., `add`, `load`, `branch`, etc.).
+- **It is not a processor**: It is the blueprint or specification, not the hardware implementation.
+- **It is not Verilog**: RISC-V processors can be implemented using Verilog, but RISC-V itself is language-agnostic.
+- **It is not a chip**: Many chips implement RISC-V, but RISC-V itself is only the architectural specification.
+
+This separation is critical: Just as a programming language is distinct from the compiler that implements it, RISC-V is distinct from the hardware or software built on top of it.
+
+---
+
+## Why We Did These Tasks
+
+The weekly tasks were designed to build our understanding of embedded systems using RISC-V from the ground up. Each step removed layers of abstraction that modern operating systems usually hide from us.
+
+| Task | Concept |
+|------|---------|
+| **Toolchain Setup** | We learned how to compile C code into RISC-V ELF binaries using a cross-compiler. |
+| **Disassembly & `info reg`** | We analyzed how our C code translates into assembly and how CPU registers change at runtime. |
+| **Memory-Mapped I/O** | We saw how to control hardware directly by writing to specific memory addresses. |
+| **Linker Scripts** | We controlled where code and data sections are placed in memory, crucial for bare-metal systems. |
+| **Start-up Code (`crt0.S`)** | We understood what happens before `main()` runs: setting the stack, zeroing `.bss`, and transferring control. |
+| **Interrupts** | We configured and handled timer interrupts, learning how CPUs respond to asynchronous events. |
+| **Atomic Operations & Endianness** | We explored concurrency control using `lr/sc` and verified byte ordering in memory. |
+| **Retargeting `printf` via UART** | We enabled output without an OS by writing our own `_write` function to communicate with a memory-mapped UART. |
+
+---
+
+## Final Reflection
+
+By completing these tasks, we developed a full-stack understanding of what goes into bringing up and controlling a bare-metal RISC-V system. We wrote programs that could boot without an OS, interact directly with memory and hardware, handle interrupts, and even print messages through a custom UART.
+
+Through this, we didn’t just learn about RISC-V as an architecture—we experienced what it means to build and control an entire system based on it. This foundation is critical not only for embedded systems development but also for understanding operating systems, device drivers, and processor design.
+
 
 
 
